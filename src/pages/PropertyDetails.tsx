@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Box, Typography, CircularProgress, Alert, Grid, Paper, Chip, Divider, List, ListItem, ListItemIcon, ListItemText, CardMedia, useTheme, useMediaQuery } from '@mui/material';
+import { Box, Typography, CircularProgress, Alert, Paper, Chip, Divider } from '@mui/material';
 import { GoogleMap, useLoadScript, Marker } from '@react-google-maps/api';
 
 // Swiper
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination } from 'swiper/modules';
-import 'swiper/css';
-import 'swiper/css/navigation';
-import 'swiper/css/pagination';
 
 // Icons
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -17,10 +14,11 @@ import BathtubIcon from '@mui/icons-material/Bathtub';
 import SquareFootIcon from '@mui/icons-material/SquareFoot';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import HomeIcon from '@mui/icons-material/Home';
-import ConstructionIcon from '@mui/icons-material/Construction';
 
 import type { Property } from '../types/types';
+import { useAuth } from '../context/AuthContext.tsx';
 import api from './api';
+import { getImageUrls } from '../utils/imageHelper';
 
 const mapContainerStyle = {
   width: '100%',
@@ -40,24 +38,16 @@ const ImageGalleryPreview: React.FC<{ images: string[]; title: string }> = ({ im
       slidesPerView={1}
       style={{ borderRadius: '8px', overflow: 'hidden' }}
     >
-      {images && images.length > 0 ? (
-        images.map((image, idx) => (
-          <SwiperSlide key={idx}>
-            <Box
-              component="img"
-              src={`http://localhost:3000${image}`}
-              alt={`${title} - ${idx + 1}`}
-              sx={{ width: '100%', height: '350px', objectFit: 'cover' }}
-            />
-          </SwiperSlide>
-        ))
-      ) : (
-        <SwiperSlide>
-          <Box sx={{ width: '100%', height: '350px', background: '#f0f0f0', display:'flex', alignItems:'center', justifyContent:'center'}}>
-              <Typography>No hay imágenes</Typography>
-          </Box>
+      {getImageUrls(images).map((imageUrl, idx) => (
+        <SwiperSlide key={idx}>
+          <Box
+            component="img"
+            src={imageUrl}
+            alt={`${title} - ${idx + 1}`}
+            sx={{ width: '100%', height: '350px', objectFit: 'cover' }}
+          />
         </SwiperSlide>
-      )}
+      ))}
     </Swiper>
   </Box>
 );
@@ -76,9 +66,7 @@ const PropertyDetails: React.FC = () => {
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { isAuthenticated } = useAuth();
 
   const { isLoaded, loadError: mapLoadError } = useLoadScript({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
@@ -141,7 +129,7 @@ const PropertyDetails: React.FC = () => {
   const center = property.latitud && property.longitud ? { lat: property.latitud, lng: property.longitud } : undefined;
 
   return (
-    <Paper elevation={3} sx={{ p: isMobile ? 2 : 4, borderRadius: '12px', m: isMobile ? 1 : 3 }}>
+    <Paper elevation={3} sx={{ p: 4, borderRadius: '12px', m: 3 }}>
       <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold' }}>
         {property.titulo || 'Sin Título'}
       </Typography>
@@ -151,11 +139,16 @@ const PropertyDetails: React.FC = () => {
           {`${property.direccion}, ${property.barrio}, ${property.ciudad}`}
         </Typography>
       </Box>
+      {!isAuthenticated && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Esta vista es de solo lectura para visitantes. Inicia sesión para guardar propiedades en favoritos, contactar al anunciante o programar una visita.
+        </Alert>
+      )}
 
-      <ImageGalleryPreview images={property.imagenes || []} title={property.titulo} />
+      <ImageGalleryPreview images={property.imagenes || []} title={property.titulo || ''} />
 
-      <Grid container spacing={4}>
-        <Grid item xs={12} md={7}>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+        <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 58%' }, minWidth: 0 }}>
             <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold', mb: 1 }}>
                 Detalles de la Propiedad
             </Typography>
@@ -176,9 +169,9 @@ const PropertyDetails: React.FC = () => {
                     </Box>
                 </Box>
             )}
-        </Grid>
+        </Box>
 
-        <Grid item xs={12} md={5}>
+        <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 38%' }, minWidth: 0 }}>
             <Box sx={{ position: 'sticky', top: '20px' }}>
                 <Paper elevation={2} sx={{ p: 2, borderRadius: '8px', mb: 2 }}>
                     <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 1}}>Condiciones Comerciales</Typography>
@@ -194,8 +187,8 @@ const PropertyDetails: React.FC = () => {
                     </Box>
                 ) : <CircularProgress />}
             </Box>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
     </Paper>
   );
 };

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import api from '../pages/api';
 import {
   AppBar,
   Box,
@@ -17,61 +18,71 @@ import {
   Badge,
   Divider,
   Tooltip,
-  useTheme,
-  useMediaQuery,
   Menu,
   MenuItem,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
   Business,
-  Favorite,
   Person,
   ExitToApp,
   Search,
   Notifications,
   Add,
-  TrendingUp,
   LocationOn,
   Settings,
   KeyboardArrowDown,
-  Dashboard,
-  Chat,
-  Description,
-  AccountBalanceWallet,
 } from '@mui/icons-material';
 
 const drawerWidth = 280;
 
 interface MainLayoutProps {
   children: React.ReactNode;
+  toolbarContent?: React.ReactNode; // Contenido personalizado para el toolbar
 }
 
 import { useAuth } from '../context/AuthContext.tsx';
 
-const MainLayout = ({ children }: MainLayoutProps) => {
+const MainLayout = ({ children, toolbarContent }: MainLayoutProps) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notificationsAnchor, setNotificationsAnchor] = useState<null | HTMLElement>(null);
+  const [myPropertiesCount, setMyPropertiesCount] = useState<number>(0);
   const navigate = useNavigate();
   const location = useLocation();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { logout } = useAuth();
+  const { logout, isAuthenticated } = useAuth();
 
-  const menuItems = [
-    { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', badge: null },
-    { text: 'Explorar', icon: <Search />, path: '/explore', badge: null },
-    { text: 'Mis Propiedades', icon: <Business />, path: '/properties', badge: 3 },
-    { text: 'Favoritos', icon: <Favorite />, path: '/favorites', badge: 12 },
-    { text: 'Mensajes', icon: <Chat />, path: '/messages', badge: 5 },
-  ];
+  // Obtener contadores dinámicos
+  useEffect(() => {
+    if (!isAuthenticated) return; // Solo obtener estadísticas si el usuario está autenticado
+    
+    const fetchUserStats = async () => {
+      try {
+        const response = await api.get('/usuarios/stats/counts');
+        setMyPropertiesCount(response.data.myPropertiesCount || 0);
+      } catch (error: any) {
+        // 401 Unauthorized: probablemente el token no está configurado aún
+        // 403 Forbidden: usuario no tiene permiso
+        // Otros errores se ignoran silenciosamente para no interrumpir UX
+        if (error?.response?.status === 401 || error?.response?.status === 403) {
+          console.debug('Usuario no autenticado para obtener estadísticas');
+        }
+        // No hacer nada - mantener valores por defecto de 0
+      }
+    };
+    
+    fetchUserStats();
+  }, [isAuthenticated]);
 
-  const secondaryItems = [
-    { text: 'Actividad', icon: <TrendingUp />, path: '/activity' },
-    { text: 'Documentos', icon: <Description />, path: '/documents' },
-    { text: 'Finanzas', icon: <AccountBalanceWallet />, path: '/finances' },
-  ];
+  const menuItems = isAuthenticated
+    ? [
+        { text: 'Explorar', icon: <Search />, path: '/explore', badge: null },
+        { text: 'Mis Propiedades', icon: <Business />, path: '/properties', badge: myPropertiesCount || null },
+      ]
+    : [
+        { text: 'Explorar', icon: <Search />, path: '/explore', badge: null },
+        { text: 'Iniciar Sesión', icon: <Person />, path: '/login', badge: null },
+      ];
 
   const notifications = [
     { id: 1, text: 'Nueva propiedad disponible en tu zona', time: '5m', unread: true },
@@ -85,9 +96,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
 
   const handleNavigate = (path: string) => {
     navigate(path);
-    if (isMobile) {
-      setMobileOpen(false);
-    }
+    setMobileOpen(false);
   };
 
   const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -139,43 +148,79 @@ const MainLayout = ({ children }: MainLayoutProps) => {
 
       {/* User Profile Card */}
       <Box sx={{ p: 2 }}>
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            p: 2,
-            bgcolor: 'white',
-            borderRadius: 2,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-            cursor: 'pointer',
-            transition: 'all 0.3s ease',
-            '&:hover': {
-              boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
-              transform: 'translateY(-2px)',
-            },
-          }}
-          onClick={handleProfileMenuOpen}
-        >
-          <Avatar
+        {isAuthenticated ? (
+          <Box
             sx={{
-              bgcolor: 'primary.main',
-              width: 48,
-              height: 48,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+              p: 2,
+              bgcolor: 'white',
+              borderRadius: 2,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+                transform: 'translateY(-2px)',
+              },
+            }}
+            onClick={handleProfileMenuOpen}
+          >
+            <Avatar
+              sx={{
+                bgcolor: 'primary.main',
+                width: 48,
+                height: 48,
+              }}
+            >
+              US
+            </Avatar>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600 }} noWrap>
+                Usuario Autenticado
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                Sesión activa
+              </Typography>
+            </Box>
+            <KeyboardArrowDown sx={{ color: 'text.secondary' }} />
+          </Box>
+        ) : (
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1.5,
+              p: 2,
+              bgcolor: 'white',
+              borderRadius: 2,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
             }}
           >
-            JD
-          </Avatar>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600 }} noWrap>
-              Juan Pérez
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+              Bienvenido
             </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-              juan@example.com
+            <Typography variant="body2" color="text.secondary">
+              Inicia sesión para publicar y gestionar propiedades.
             </Typography>
+            <Box>
+              <ListItemButton
+                onClick={() => navigate('/login')}
+                sx={{
+                  mt: 1,
+                  borderRadius: 1.5,
+                  bgcolor: 'primary.main',
+                  color: 'white',
+                  '&:hover': { bgcolor: 'primary.dark' },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 36, color: 'inherit' }}><Person /></ListItemIcon>
+                <ListItemText primary="Iniciar Sesión" />
+              </ListItemButton>
+            </Box>
           </Box>
-          <KeyboardArrowDown sx={{ color: 'text.secondary' }} />
-        </Box>
+        )}
       </Box>
 
       {/* Main Navigation */}
@@ -229,102 +274,46 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             </ListItemButton>
           </ListItem>
         ))}
-
-        <Divider sx={{ my: 2 }} />
-
-        <Typography
-          variant="overline"
-          sx={{
-            px: 2,
-            color: 'text.secondary',
-            fontWeight: 600,
-            fontSize: '0.7rem',
-          }}
-        >
-          Herramientas
-        </Typography>
-
-        {secondaryItems.map((item) => (
-          <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
-            <ListItemButton
-              onClick={() => handleNavigate(item.path)}
-              selected={isActive(item.path)}
-              sx={{
-                borderRadius: 2,
-                minHeight: 48,
-                transition: 'all 0.2s ease',
-                '&.Mui-selected': {
-                  bgcolor: 'primary.main',
-                  color: 'white',
-                  '&:hover': {
-                    bgcolor: 'primary.dark',
-                  },
-                  '& .MuiListItemIcon-root': {
-                    color: 'white',
-                  },
-                },
-                '&:hover': {
-                  bgcolor: isActive(item.path) ? 'primary.dark' : 'rgba(0,0,0,0.04)',
-                  transform: 'translateX(4px)',
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{
-                  color: isActive(item.path) ? 'white' : 'text.secondary',
-                  minWidth: 40,
-                }}
-              >
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText
-                primary={item.text}
-                primaryTypographyProps={{
-                  fontSize: '0.95rem',
-                  fontWeight: isActive(item.path) ? 600 : 500,
-                }}
-              />
-            </ListItemButton>
-          </ListItem>
-        ))}
       </List>
 
       {/* Bottom Actions */}
-      <Box sx={{ p: 2 }}>
-        <ListItemButton
-          onClick={() => handleNavigate('/settings')}
-          sx={{
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'divider',
-            mb: 1,
-          }}
-        >
-          <ListItemIcon sx={{ minWidth: 40 }}>
-            <Settings />
-          </ListItemIcon>
-          <ListItemText primary="Configuración" />
-        </ListItemButton>
+      {isAuthenticated && (
+        <Box sx={{ p: 2 }}>
+          <ListItemButton
+            onClick={() => handleNavigate('/settings')}
+            sx={{
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: 'divider',
+              mb: 1,
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 40 }}>
+              <Settings />
+            </ListItemIcon>
+            <ListItemText primary="Configuración" />
+          </ListItemButton>
 
-        <ListItemButton
-          onClick={handleLogout}
-          sx={{
-            borderRadius: 2,
-            color: 'error.main',
-            border: '1px solid',
-            borderColor: 'error.light',
-            '&:hover': {
-              bgcolor: 'error.light',
-              borderColor: 'error.main',
-            },
-          }}
-        >
-          <ListItemIcon sx={{ minWidth: 40, color: 'error.main' }}>
-            <ExitToApp />
-          </ListItemIcon>
-          <ListItemText primary="Cerrar Sesión" />
-        </ListItemButton>
-      </Box>
+          <ListItemButton
+            onClick={handleLogout}
+            sx={{
+              borderRadius: 2,
+              color: 'error.main',
+              border: '1px solid',
+              borderColor: 'error.light',
+              '&:hover': {
+                bgcolor: 'error.light',
+                borderColor: 'error.main',
+              },
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 40, color: 'error.main' }}>
+              <ExitToApp />
+            </ListItemIcon>
+            <ListItemText primary="Cerrar Sesión" />
+          </ListItemButton>
+        </Box>
+      )}
     </Box>
   );
 
@@ -360,40 +349,9 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             </Typography>
           </Box>
 
+          {/* Contenido personalizado del toolbar (controles de vista desde Explore) */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {/* Add Property Button */}
-            <Tooltip title="Agregar Propiedad">
-              <IconButton
-                onClick={() => navigate('/create-property')}
-                sx={{
-                  bgcolor: 'primary.main',
-                  color: 'white',
-                  '&:hover': {
-                    bgcolor: 'primary.dark',
-                    transform: 'scale(1.05)',
-                  },
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                <Add />
-              </IconButton>
-            </Tooltip>
-
-            {/* Notifications */}
-            <Tooltip title="Notificaciones">
-              <IconButton onClick={handleNotificationsOpen}>
-                <Badge badgeContent={notifications.filter(n => n.unread).length} color="error">
-                  <Notifications />
-                </Badge>
-              </IconButton>
-            </Tooltip>
-
-            {/* Profile Avatar */}
-            <IconButton onClick={handleProfileMenuOpen} sx={{ ml: 1 }}>
-              <Avatar sx={{ width: 36, height: 36, bgcolor: 'primary.main' }}>
-                JP
-              </Avatar>
-            </IconButton>
+            {toolbarContent}
           </Box>
         </Toolbar>
       </AppBar>

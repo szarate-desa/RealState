@@ -5,10 +5,11 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import KingBedIcon from '@mui/icons-material/KingBed';
 import BathtubIcon from '@mui/icons-material/Bathtub';
 import SquareFootIcon from '@mui/icons-material/SquareFoot';
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import HomeIcon from '@mui/icons-material/Home';
 import ConstructionIcon from '@mui/icons-material/Construction';
 import type { Property } from '../types/types';
+import { formatPrice } from '../utils/format';
+import { getImageUrl, getImageUrls } from '../utils/imageHelper';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination } from 'swiper/modules';
 
@@ -21,13 +22,6 @@ interface SidebarCardProps {
 const SidebarCard: React.FC<SidebarCardProps> = ({ property, isOpen, onClose }) => {
   if (!property) return null;
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('es-ES', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
 
   return (
     <Drawer
@@ -55,29 +49,17 @@ const SidebarCard: React.FC<SidebarCardProps> = ({ property, isOpen, onClose }) 
           slidesPerView={1}
           style={{ borderRadius: '8px', overflow: 'hidden' }}
         >
-          {property.imagenes && property.imagenes.length > 0 ? (
-            property.imagenes.map((image, idx) => (
-              <SwiperSlide key={idx}>
-                <CardMedia
-                  component="img"
-                  height="200"
-                  image={`http://localhost:3000${image}`}
-                  alt={`${property.titulo} - ${idx + 1}`}
-                  sx={{ objectFit: 'cover' }}
-                />
-              </SwiperSlide>
-            ))
-          ) : (
-            <SwiperSlide>
+          {getImageUrls(property.imagenes).map((imageUrl, idx) => (
+            <SwiperSlide key={idx}>
               <CardMedia
                 component="img"
                 height="200"
-                image="https://via.placeholder.com/400x200?text=Sin+Imagen"
-                alt="Sin Imagen"
+                image={imageUrl}
+                alt={`${property.titulo} - ${idx + 1}`}
                 sx={{ objectFit: 'cover' }}
               />
             </SwiperSlide>
-          )}
+          ))}
         </Swiper>
       </Box>
 
@@ -123,7 +105,7 @@ const SidebarCard: React.FC<SidebarCardProps> = ({ property, isOpen, onClose }) 
         <Box sx={{ mt: 2 }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Amenidades:</Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            {property.amenities.map((amenity, idx) => (
+            {property.amenities.map((amenity: string, idx: number) => (
               <Chip key={idx} label={amenity} size="small" icon={<ConstructionIcon fontSize='small' />} />
             ))}
           </Box>

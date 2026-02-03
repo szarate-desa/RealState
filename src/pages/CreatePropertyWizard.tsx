@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import api from './api';
 
 // Importa los componentes de los pasos (a crear)
@@ -76,13 +76,61 @@ const CustomProgressBar = ({ currentStep, totalSteps }: { currentStep: number; t
 };
 
 export default function CreatePropertyWizard() {
+  const { id } = useParams<{ id: string }>(); // ID de propiedad para edición
+  const isEditMode = Boolean(id);
+  
   const [currentStep, setCurrentStep] = useState(1);
   const [propertyData, setPropertyData] = useState(initialPropertyData);
+  const [loading, setLoading] = useState(false);
   
   // Estados para datos de la UI (selectores, etc.)
   const [tipos, setTipos] = useState([]);
   const [departamentos, setDepartamentos] = useState([]);
   const [ciudades, setCiudades] = useState([]);
+
+  // Cargar propiedad existente si es modo edición
+  useEffect(() => {
+    if (isEditMode && id) {
+      const loadProperty = async () => {
+        try {
+          setLoading(true);
+          const response = await api.get(`/propiedades/${id}`);
+          const property = response.data;
+          
+          // Mapear datos de la propiedad al formato del wizard
+          setPropertyData({
+            titulo: property.titulo || '',
+            descripcion: property.descripcion || '',
+            id_inmueble_tipo: property.id_inmueble_tipo || '',
+            id_ciudad: property.id_ciudad || '',
+            precio_venta: property.precio_venta?.toString() || '',
+            precio_alquiler: property.precio_alquiler?.toString() || '',
+            direccion: property.direccion || '',
+            barrio: property.barrio || '',
+            codigo_postal: property.codigo_postal || '',
+            numero_habitaciones: property.numero_habitaciones?.toString() || '0',
+            numero_banos: property.numero_banos?.toString() || '0',
+            superficie_total: property.superficie_total?.toString() || '0',
+            latitud: property.latitud?.toString() || '',
+            longitud: property.longitud?.toString() || '',
+            id_departamento: property.id_departamento || '',
+            departamentoNombre: property.departamento || '',
+            paisNombre: property.pais || '',
+            ciudadNombre: property.ciudad || '',
+            id_ubicacion: property.id_ubicacion,
+            audioUri: null,
+            images: property.imagenes || [],
+          });
+        } catch (error) {
+          console.error('Error al cargar la propiedad:', error);
+          alert('Error al cargar los datos de la propiedad');
+        } finally {
+          setLoading(false);
+        }
+      };
+      loadProperty();
+    }
+  }, [isEditMode, id]);
 
   // Cargar datos para los selectores al montar el componente
   useEffect(() => {
@@ -224,20 +272,38 @@ export default function CreatePropertyWizard() {
 
     try {
       console.log('[Wizard] Enviando payload a backend:', plainPayload);
-      // 1. Crear la propiedad
-      const response = await api.post('/propiedades', plainPayload, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      
+      let propertyId: string;
+      
+      if (isEditMode && id) {
+        // Modo edición: actualizar propiedad existente
+        const response = await api.put(`/propiedades/${id}`, plainPayload, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
 
-      const responseData = response.data;
-      console.log('[Wizard] Respuesta backend creación propiedad:', responseData);
-      if (!response.status.toString().startsWith('2')) throw new Error(responseData.error || 'Error al crear la propiedad.');
+        const responseData = response.data;
+        console.log('[Wizard] Respuesta backend actualización propiedad:', responseData);
+        if (!response.status.toString().startsWith('2')) throw new Error(responseData.error || 'Error al actualizar la propiedad.');
 
-      const propertyId = responseData.id;
+        propertyId = id;
+      } else {
+        // Modo creación: crear nueva propiedad
+        const response = await api.post('/propiedades', plainPayload, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
 
-      // 2. Subir imágenes
+        const responseData = response.data;
+        console.log('[Wizard] Respuesta backend creación propiedad:', responseData);
+        if (!response.status.toString().startsWith('2')) throw new Error(responseData.error || 'Error al crear la propiedad.');
+
+        propertyId = responseData.id;
+      }
+
+      // 2. Subir imágenes (solo si hay imágenes nuevas de tipo File)
       if (rawImages && rawImages.length > 0 && rawImages[0] instanceof File) {
         try {
           const formData = new FormData();
@@ -257,16 +323,16 @@ export default function CreatePropertyWizard() {
 
         } catch (upErr: any) {
           console.error('[Wizard] Error subiendo imágenes a la propiedad:', upErr);
-          alert('La propiedad fue creada pero hubo un problema subiendo las imágenes.');
+          alert(`La propiedad fue ${isEditMode ? 'actualizada' : 'creada'} pero hubo un problema subiendo las imágenes.`);
         }
       }
 
-      alert('Propiedad creada correctamente.');
-      navigate('/dashboard');
+      alert(`Propiedad ${isEditMode ? 'actualizada' : 'creada'} correctamente.`);
+      navigate(isEditMode ? '/properties' : '/explore');
 
     } catch (err: any) {
       console.error('[Wizard] Error en handleSubmit:', err);
-      alert(err.message || 'Error desconocido al crear la propiedad.');
+      alert(err.message || `Error desconocido al ${isEditMode ? 'actualizar' : 'crear'} la propiedad.`);
     }
   };
 
@@ -290,9 +356,17 @@ export default function CreatePropertyWizard() {
     }
   };
 
+  if (loading) {
+    return (
+      <div style={{ padding: '20px', textAlign: 'center' }}>
+        <p>Cargando datos de la propiedad...</p>
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: '20px' }}>
-      <h1>Publicar Propiedad</h1>
+      <h1>{isEditMode ? 'Editar Propiedad' : 'Publicar Propiedad'}</h1>
       <CustomProgressBar currentStep={currentStep} totalSteps={steps.length} />
       <div>{renderStepContent(currentStep)}</div>
     </div>

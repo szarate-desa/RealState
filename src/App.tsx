@@ -1,8 +1,10 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
+import Register from './pages/Register'
+import Explore from './pages/Explore'
 import CreatePropertyWizard from './pages/CreatePropertyWizard'
 import PropertyDetails from './pages/PropertyDetails'
+import MyProperties from './pages/MyProperties'
 import MainLayout from './layouts/MainLayout'
 import { useAuth } from './context/AuthContext.tsx'
 import type { ReactNode } from 'react'
@@ -16,7 +18,7 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   }
   if (!isAuthenticated) {
     // Si no está autenticado, redirigir a la página de login
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" replace />;
   }
   return children;
 };
@@ -25,25 +27,36 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 const LoginPage = () => {
   const { isAuthenticated } = useAuth();
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/explore" replace />;
   }
   return <Login />;
+};
+
+// Componente para la página de registro que redirige si ya está autenticado
+const RegisterPage = () => {
+  const { isAuthenticated } = useAuth();
+  if (isAuthenticated) {
+    return <Navigate to="/explore" replace />;
+  }
+  return <Register />;
 };
 
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<LoginPage />} />
+        {/* Ruta raíz redirige a explorar */}
+        <Route path="/" element={<Navigate to="/explore" replace />} />
+        
+        {/* Página de login */}
+        <Route path="/login" element={<LoginPage />} />
+        
+        {/* Página de registro */}
+        <Route path="/register" element={<RegisterPage />} />
+        
         <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <MainLayout>
-                <Dashboard />
-              </MainLayout>
-            </ProtectedRoute>
-          }
+          path="/explore"
+          element={<Explore />}
         />
         <Route
           path="/create-property"
@@ -56,11 +69,29 @@ function App() {
           }
         />
         <Route
-          path="/property/:id"
+          path="/edit-property/:id"
           element={
             <ProtectedRoute>
               <MainLayout>
-                <PropertyDetails />
+                <CreatePropertyWizard />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/property/:id"
+          element={
+            <MainLayout>
+              <PropertyDetails />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/properties"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <MyProperties />
               </MainLayout>
             </ProtectedRoute>
           }

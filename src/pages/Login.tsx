@@ -10,13 +10,16 @@ import {
   IconButton,
   Alert,
   CircularProgress,
+  Stack,
 } from '@mui/material';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
+import { Visibility, VisibilityOff, PersonAdd, Explore } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import api from './api';
 import { useAuth } from '../context/AuthContext.tsx';
 
 const Login = () => {
   const { login } = useAuth();
+  const navigate = useNavigate();
 
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -41,7 +44,7 @@ const Login = () => {
 
       const data = res.data;
       if (data?.token) {
-        login(data.token); // Usar el contexto para iniciar sesión
+        login(data.token, data.refreshToken); // Pasar ambos tokens al contexto
       } else {
         setError('Respuesta inválida del servidor.');
       }
@@ -148,6 +151,29 @@ const Login = () => {
                 'Iniciar Sesión'
               )}
             </Button>
+
+            {/* Botones secundarios */}
+            <Stack spacing={1.5}>
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<PersonAdd />}
+                onClick={() => navigate('/register')}
+                disabled={loading}
+              >
+                Registrarse
+              </Button>
+              <Button
+                fullWidth
+                variant="text"
+                startIcon={<Explore />}
+                onClick={() => navigate('/explore')}
+                disabled={loading}
+                sx={{ color: 'text.secondary' }}
+              >
+                Explorar como invitado
+              </Button>
+            </Stack>
           </Box>
         </Paper>
       </Box>

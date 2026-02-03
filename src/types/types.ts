@@ -25,6 +25,7 @@ export interface Property {
   numero_banos: number;
   superficie_total: number;
   tipo_propiedad: string;
+  amenities?: string[]; // Lista opcional de amenidades
 
   // Estado manejado en el frontend
   isFavorite?: boolean;

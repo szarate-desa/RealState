@@ -244,6 +244,7 @@ const StepUbicacion: React.FC<StepUbicacionProps> = ({ onNext, initialData, depa
               type="text"
               value={barrio}
               onChange={e => setBarrio(e.target.value)}
+              placeholder="Ej: Centro (si se deja vacío se usará 'Sin especificar')"
               style={{ width: '100%' }}
             />
           </div>
@@ -258,7 +259,7 @@ const StepUbicacion: React.FC<StepUbicacionProps> = ({ onNext, initialData, depa
             direccion,
             id_departamento: idDepartamento,
             id_ciudad: idCiudad,
-            barrio,
+            barrio: barrio || 'Sin especificar',
             paisNombre,
             departamentoNombre,
             ciudadNombre

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Grid, Typography, Chip, CircularProgress, Paper, List, ListItem, ListItemIcon, ListItemText, Button, IconButton, useTheme, useMediaQuery, Divider } from '@mui/material';
+import { Box, Grid, Typography, Chip, CircularProgress, Paper, List, ListItem, ListItemIcon, ListItemText, Button, IconButton, Divider } from '@mui/material';
 import { GoogleMap, Marker, useLoadScript } from '@react-google-maps/api';
 
 // Swiper
@@ -78,9 +78,6 @@ const KeyDetails: React.FC<{ data: any }> = ({ data }) => (
 );
 
 const StepRevision: React.FC<StepRevisionProps> = ({ onBack, onSubmit, initialData, loading }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
     libraries,
@@ -91,7 +88,7 @@ const StepRevision: React.FC<StepRevisionProps> = ({ onBack, onSubmit, initialDa
   if (loadError) return <div>Error cargando mapas</div>;
 
   return (
-    <Paper elevation={3} sx={{ p: isMobile ? 2 : 4, borderRadius: '12px' }}>
+    <Paper elevation={3} sx={{ p: 4, borderRadius: '12px' }}>
       <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold' }}>
         {initialData.titulo || 'Sin Título'}
       </Typography>

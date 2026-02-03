@@ -3,23 +3,29 @@ import { Box, Typography, Button } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 
 interface StepImagesProps {
-  onNext: (data: { images: File[] }) => void;
+  onNext: (data: { images: (File | string)[] }) => void;
   onBack: () => void;
-  initialData: { images: File[] };
+  initialData: { images: (File | string)[] };
 }
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = Infinity; // sin límite de tamaño
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_IMAGES = 20;
 
 const StepImages: React.FC<StepImagesProps> = ({ onNext, onBack, initialData }) => {
-  const [files, setFiles] = useState<File[]>(initialData.images || []);
-  const [previews, setPreviews] = useState<string[]>(initialData.images.map(f => URL.createObjectURL(f)) || []);
+  const [files, setFiles] = useState<(File | string)[]>(initialData.images || []);
+  const [previews, setPreviews] = useState<string[]>(
+    (initialData.images || []).map(f => 
+      typeof f === 'string' ? f : URL.createObjectURL(f)
+    )
+  );
   const [isDragging, setIsDragging] = useState(false);
 
   React.useEffect(() => {
     setFiles(initialData.images || []);
-    setPreviews((initialData.images || []).map(f => URL.createObjectURL(f)));
+    setPreviews((initialData.images || []).map(f => 
+      typeof f === 'string' ? f : URL.createObjectURL(f)
+    ));
   }, [initialData]);
 
   const processFiles = (newFiles: FileList | null) => {
@@ -85,6 +91,12 @@ const StepImages: React.FC<StepImagesProps> = ({ onNext, onBack, initialData }) 
   const removeFile = (index: number) => {
     const newFiles = files.filter((_, i) => i !== index);
     const newPreviews = previews.filter((_, i) => i !== index);
+    
+    // Cleanup object URLs for File objects only
+    if (previews[index] && typeof files[index] !== 'string') {
+      URL.revokeObjectURL(previews[index]);
+    }
+    
     setFiles(newFiles);
     setPreviews(newPreviews);
   };

@@ -1,107 +1,72 @@
-import React, { useEffect, useRef } from 'react';
-import { Grid, CircularProgress, Typography } from '@mui/material';
+import React from 'react';
+import { Box, CircularProgress, Typography } from '@mui/material';
 import PropertyCard from './PropertyCard';
 import type { Property } from '../types/types';
+import { useInfiniteProperties } from '../hooks/useInfiniteProperties';
 
 interface PropertyListProps {
   properties: Property[];
-  onPropertyHover: (propertyId: string | null) => void;
-  onLocateClick: (propertyId: string) => void;
-  hoveredPropertyId: string | null;
-  selectedPropertyId: string | null;
+  onPropertyHover: (propertyId: number | null) => void;
+  onLocateClick: (propertyId: number) => void;
+  hoveredPropertyId: number | null;
+  selectedPropertyId: number | null;
   viewMode: 'map' | 'list' | 'split';
-  isListView: boolean;
   loadMore: () => void;
   hasMore: boolean;
   isFetchingMore: boolean;
 }
 
-const PropertyList: React.FC<PropertyListProps> = ({ properties, onPropertyHover, onLocateClick, hoveredPropertyId, selectedPropertyId, viewMode, isListView, loadMore, hasMore, isFetchingMore }) => {
-  const itemRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
-  const observer = useRef<IntersectionObserver | null>(null);
-
-  useEffect(() => {
-    if (selectedPropertyId !== null && itemRefs.current[selectedPropertyId]) {
-      itemRefs.current[selectedPropertyId]?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      });
-    }
-  }, [selectedPropertyId]);
-
-  useEffect(() => {
-    if (isFetchingMore || !hasMore) return;
-
-    if (observer.current) {
-      observer.current.disconnect();
-    }
-
-    observer.current = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && hasMore && !isFetchingMore) {
-        loadMore();
-      }
-    }, { threshold: 1.0 });
-
-    if (properties.length > 0) {
-        const lastItem = itemRefs.current[properties[properties.length - 1]?.id];
-        if (lastItem) {
-          observer.current.observe(lastItem);
-        }
-    }
-
-
-    return () => {
-      if (observer.current) {
-        observer.current.disconnect();
-      }
-    };
-  }, [properties, loadMore, hasMore, isFetchingMore]);
-
-  const getGridItemSize = () => {
-    if (viewMode === 'split' || isListView) { // If in split view or list view, always full width
-      return { xs: 12 };
-    }
-    return { xs: 12, sm: 6, md: 4 }; // Default responsive sizing
-  };
+const PropertyList: React.FC<PropertyListProps> = ({ properties, onPropertyHover, onLocateClick, hoveredPropertyId, selectedPropertyId, viewMode, loadMore, hasMore, isFetchingMore }) => {
+  const { getRefCallback } = useInfiniteProperties({
+    properties,
+    hasMore,
+    isFetchingMore,
+    loadMore,
+    selectedPropertyId,
+    enableScrollToSelected: true,
+    viewMode,
+  });
 
   return (
-    <Grid container spacing={3}>
-      {properties.map((property) => {
-        const gridSizes = getGridItemSize();
-        return (
-          <Grid
-            item
-            key={property.id}
-            xs={gridSizes.xs}
-            sm={gridSizes.sm}
-            md={gridSizes.md}
-            ref={(el: HTMLDivElement | null) => {
-              if (el) {
-                itemRefs.current[property.id] = el;
-              }
-            }}
-          >
-            <PropertyCard
-              property={property}
-              onMouseEnter={() => onPropertyHover(property.id)}
-              onMouseLeave={() => onPropertyHover(null)}
-              onLocateClick={() => onLocateClick(property.id)}
-              isHovered={hoveredPropertyId === property.id || selectedPropertyId === property.id}
-            />
-          </Grid>
-        );
-      })}
+    <Box
+      sx={{
+        display: 'grid',
+        gap: 2,
+        maxWidth: viewMode === 'list' ? 1400 : '100%',
+        mx: viewMode === 'list' ? 'auto' : 0,
+        gridTemplateColumns: {
+          xs: '1fr',
+          sm: viewMode === 'list' ? '1fr' : 'repeat(2, 1fr)',
+          md: viewMode === 'list' ? 'repeat(2, 1fr)' : viewMode === 'split' ? '1fr' : 'repeat(3, 1fr)'
+        }
+      }}
+    >
+      {properties.map((property) => (
+        <Box
+          key={property.id}
+          ref={getRefCallback(property.id)}
+        >
+          <PropertyCard
+            property={property}
+            onMouseEnter={() => onPropertyHover(Number(property.id))}
+            onMouseLeave={() => onPropertyHover(null)}
+            onLocateClick={onLocateClick}
+            isHovered={hoveredPropertyId === Number(property.id) || selectedPropertyId === Number(property.id)}
+            compact={viewMode === 'split'}
+          />
+        </Box>
+      ))}
       {isFetchingMore && (
-        <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-          <CircularProgress />
-        </Grid>
+        <Box sx={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'center', py: 2 }}>
+          <CircularProgress size={28} />
+        </Box>
       )}
       {!hasMore && properties.length > 0 && (
-        <Grid item xs={12} sx={{ textAlign: 'center', py: 2 }}>
-          <Typography variant="body2" color="text.secondary">No hay más propiedades para cargar.</Typography>
-        </Grid>
+        <Box sx={{ gridColumn: '1 / -1', textAlign: 'center', py: 2 }}>
+          <Typography variant="body2" color="text.secondary">Fin de resultados.</Typography>
+        </Box>
       )}
-    </Grid>
+    </Box>
   );
 };
 

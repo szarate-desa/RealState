@@ -1,7 +1,5 @@
 import axios from "axios";
-
-// URL base local
-const API_BASE_URL = "http://localhost:3000";
+import { API_BASE_URL } from '../config/constants';
 
 // Instancia básica de Axios
 const api = axios.create({
