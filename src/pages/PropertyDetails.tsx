@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Box, Typography, CircularProgress, Alert, Paper, Chip, Divider } from '@mui/material';
+import { Box, Typography, CircularProgress, Alert, Paper, Chip, Divider, Button } from '@mui/material';
 import { GoogleMap, useLoadScript, Marker } from '@react-google-maps/api';
 
 // Swiper
@@ -14,6 +14,10 @@ import BathtubIcon from '@mui/icons-material/Bathtub';
 import SquareFootIcon from '@mui/icons-material/SquareFoot';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import HomeIcon from '@mui/icons-material/Home';
+import PhoneIcon from '@mui/icons-material/Phone';
+import EventIcon from '@mui/icons-material/Event';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import ShareIcon from '@mui/icons-material/Share';
 
 import type { Property } from '../types/types';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -22,7 +26,7 @@ import { getImageUrls } from '../utils/imageHelper';
 
 const mapContainerStyle = {
   width: '100%',
-  height: '250px',
+  height: '450px',
   borderRadius: '8px',
 };
 
@@ -44,7 +48,7 @@ const ImageGalleryPreview: React.FC<{ images: string[]; title: string }> = ({ im
             component="img"
             src={imageUrl}
             alt={`${title} - ${idx + 1}`}
-            sx={{ width: '100%', height: '350px', objectFit: 'cover' }}
+            sx={{ width: '100%', height: '650px', objectFit: 'cover' }}
           />
         </SwiperSlide>
       ))}
@@ -149,22 +153,52 @@ const PropertyDetails: React.FC = () => {
 
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
         <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 58%' }, minWidth: 0 }}>
-            <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold', mb: 1 }}>
+            <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold', mb: 2 }}>
                 Detalles de la Propiedad
             </Typography>
           
             <KeyDetails property={property} />
-            <Divider sx={{ my: 2 }} />
-            <Typography variant="body1" paragraph>
-                {property.descripcion || 'Sin descripción.'}
-            </Typography>
+            <Divider sx={{ my: 3 }} />
+            
+            {/* Renderizar descripción con formato HTML */}
+            <Box 
+              sx={{ 
+                '& h3': { 
+                  fontSize: '1.25rem', 
+                  fontWeight: 600, 
+                  mt: 3, 
+                  mb: 1.5,
+                  color: 'primary.main'
+                },
+                '& p': { 
+                  mb: 2, 
+                  lineHeight: 1.7,
+                  color: 'text.secondary'
+                },
+                '& ul': { 
+                  pl: 2, 
+                  mb: 2 
+                },
+                '& li': { 
+                  mb: 1,
+                  lineHeight: 1.6
+                },
+                '& strong': {
+                  color: 'text.primary',
+                  fontWeight: 600
+                }
+              }}
+              dangerouslySetInnerHTML={{ 
+                __html: property.descripcion || '<p>Sin descripción.</p>' 
+              }}
+            />
 
             {property.amenities && property.amenities.length > 0 && (
-                <Box sx={{ mt: 3 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>Amenidades</Typography>
+                <Box sx={{ mt: 4 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>🎯 Amenidades</Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                         {property.amenities.map((amenity: string, idx) => (
-                            <Chip key={idx} label={amenity} variant="outlined" />
+                            <Chip key={idx} label={amenity} variant="outlined" color="primary" />
                         ))}
                     </Box>
                 </Box>
@@ -173,18 +207,76 @@ const PropertyDetails: React.FC = () => {
 
         <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 38%' }, minWidth: 0 }}>
             <Box sx={{ position: 'sticky', top: '20px' }}>
-                <Paper elevation={2} sx={{ p: 2, borderRadius: '8px', mb: 2 }}>
-                    <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 1}}>Condiciones Comerciales</Typography>
-                    <Typography variant="h6"><AttachMoneyIcon sx={{verticalAlign: 'middle'}}/> Precio: ${property.precio.toLocaleString()}</Typography>
+                {/* Precio destacado */}
+                <Paper elevation={3} sx={{ p: 3, borderRadius: '12px', mb: 2, textAlign: 'center', bgcolor: 'primary.main', color: 'white' }}>
+                    <Typography variant="body2" sx={{ opacity: 0.9, mb: 0.5 }}>Precio</Typography>
+                    <Typography variant="h3" sx={{ fontWeight: 'bold', mb: 1 }}>
+                        ${property.precio.toLocaleString()}
+                    </Typography>
+                    <Chip label="Oportunidad" size="small" sx={{ bgcolor: 'warning.main', color: 'white', fontWeight: 'bold' }} />
                 </Paper>
 
-                {isLoaded && center ? (
-                    <Box>
-                        <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>Ubicación</Typography>
-                        <GoogleMap mapContainerStyle={mapContainerStyle} center={center} zoom={15} options={{ disableDefaultUI: true }}>
-                            <Marker position={center} />
-                        </GoogleMap>
+                {/* CTAs principales */}
+                <Paper elevation={2} sx={{ p: 2, borderRadius: '8px', mb: 2 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                        <Button 
+                          variant="contained" 
+                          fullWidth 
+                          size="large"
+                          startIcon={<PhoneIcon />}
+                          sx={{ py: 1.5, fontWeight: 'bold' }}
+                        >
+                          Contactar
+                        </Button>
+                        <Box sx={{ display: 'flex', gap: 1.5 }}>
+                            <Button 
+                              variant="outlined" 
+                              fullWidth
+                              startIcon={<EventIcon />}
+                            >
+                              Agendar Visita
+                            </Button>
+                            <Button 
+                              variant="outlined" 
+                              fullWidth
+                              startIcon={<FavoriteIcon />}
+                            >
+                              Guardar
+                            </Button>
+                        </Box>
+                        <Button 
+                          variant="text" 
+                          fullWidth
+                          startIcon={<ShareIcon />}
+                          size="small"
+                        >
+                          Compartir Propiedad
+                        </Button>
                     </Box>
+                </Paper>
+
+                {/* Mapa con contexto */}
+                {isLoaded && center ? (
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>📍 Ubicación Privilegiada</Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      En el corazón de {property.barrio}, a pasos de todo
+                    </Typography>
+                    <GoogleMap mapContainerStyle={mapContainerStyle} center={center} zoom={15} options={{ disableDefaultUI: true }}>
+                      <Marker position={center} />
+                    </GoogleMap>
+                    <Button
+                      variant="outlined"
+                      fullWidth
+                      sx={{ mt: 2 }}
+                      component="a"
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${center.lat},${center.lng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Ver indicaciones en Google Maps
+                    </Button>
+                  </Box>
                 ) : <CircularProgress />}
             </Box>
         </Box>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Grid, Typography, Chip, CircularProgress, Paper, List, ListItem, ListItemIcon, ListItemText, Button, IconButton, Divider } from '@mui/material';
+import { Box, Typography, Chip, CircularProgress, Paper, Button, IconButton, Divider } from '@mui/material';
 import { GoogleMap, Marker, useLoadScript } from '@react-google-maps/api';
 
 // Swiper
@@ -8,13 +8,13 @@ import { Navigation, Pagination } from 'swiper/modules';
 
 // Icons
 import LocationOnIcon from '@mui/icons-material/LocationOn';
-import KingBedIcon from '@mui/icons-material/KingBed';
-import BathtubIcon from '@mui/icons-material/Bathtub';
-import SquareFootIcon from '@mui/icons-material/SquareFoot';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import HomeIcon from '@mui/icons-material/Home';
-import ConstructionIcon from '@mui/icons-material/Construction';
 import EditIcon from '@mui/icons-material/Edit';
+import PhoneIcon from '@mui/icons-material/Phone';
+import EventIcon from '@mui/icons-material/Event';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import ShareIcon from '@mui/icons-material/Share';
 
 interface StepRevisionProps {
   onBack: (step?: number) => void;
@@ -25,7 +25,7 @@ interface StepRevisionProps {
 
 const mapContainerStyle = {
   width: '100%',
-  height: '250px',
+  height: '450px',
   borderRadius: '8px',
 };
 
@@ -49,7 +49,7 @@ const ImageGalleryPreview: React.FC<{ images: any[]; onEdit: () => void }> = ({ 
               component="img"
               src={src}
               alt={`Propiedad ${idx + 1}`}
-              sx={{ width: '100%', height: '350px', objectFit: 'cover' }}
+              sx={{ width: '100%', height: '650px', objectFit: 'cover' }}
             />
           </SwiperSlide>
         );
@@ -70,10 +70,7 @@ const ImageGalleryPreview: React.FC<{ images: any[]; onEdit: () => void }> = ({ 
 
 const KeyDetails: React.FC<{ data: any }> = ({ data }) => (
     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, my: 2, justifyContent: 'center' }}>
-        <Chip icon={<HomeIcon />} label={`Tipo: ${data.id_inmueble_tipo}`} />
-        <Chip icon={<SquareFootIcon />} label={`${data.superficie_total} m²`} />
-        {parseInt(data.numero_habitaciones, 10) > 0 && <Chip icon={<KingBedIcon />} label={`${data.numero_habitaciones} hab.`} />}
-        {parseInt(data.numero_banos, 10) > 0 && <Chip icon={<BathtubIcon />} label={`${data.numero_banos} baños`} />}
+        <Chip icon={<HomeIcon />} label={`Tipo: ${data.tipo_nombre || 'No especificado'}`} />
     </Box>
 );
 
@@ -101,54 +98,146 @@ const StepRevision: React.FC<StepRevisionProps> = ({ onBack, onSubmit, initialDa
 
       <ImageGalleryPreview images={initialData.images} onEdit={() => onBack(3)} />
 
-      <Grid container spacing={4}>
-        <Grid xs={12} md={7}>
-            <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
-                <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold', mb: 1 }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+        <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 58%' }, minWidth: 0 }}>
+            <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2}}>
+                <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold' }}>
                     Detalles de la Propiedad
                 </Typography>
-                <IconButton size="small" onClick={() => onBack(2)}><EditIcon /></IconButton>
+                <IconButton size="small" onClick={() => onBack(2)} sx={{ bgcolor: 'primary.light', '&:hover': { bgcolor: 'primary.main', color: 'white' } }}>
+                  <EditIcon fontSize="small" />
+                </IconButton>
             </Box>
           
             <KeyDetails data={initialData} />
-            <Divider sx={{ my: 2 }} />
-            <Typography variant="body1" paragraph>
-                {initialData.descripcion || 'Sin descripción.'}
-            </Typography>
+            <Divider sx={{ my: 3 }} />
+            
+            {/* Renderizar descripción con formato HTML */}
+            <Box 
+              sx={{ 
+                '& h3': { 
+                  fontSize: '1.25rem', 
+                  fontWeight: 600, 
+                  mt: 3, 
+                  mb: 1.5,
+                  color: 'primary.main'
+                },
+                '& p': { 
+                  mb: 2, 
+                  lineHeight: 1.7,
+                  color: 'text.secondary'
+                },
+                '& ul': { 
+                  pl: 2, 
+                  mb: 2 
+                },
+                '& li': { 
+                  mb: 1,
+                  lineHeight: 1.6
+                },
+                '& strong': {
+                  color: 'text.primary',
+                  fontWeight: 600
+                }
+              }}
+              dangerouslySetInnerHTML={{ 
+                __html: initialData.descripcion || '<p>Sin descripción.</p>' 
+              }}
+            />
+        </Box>
 
-            {initialData.amenities && initialData.amenities.length > 0 && (
-                <Box sx={{ mt: 3 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>Amenidades</Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                        {initialData.amenities.map((amenity: string) => (
-                            <Chip key={amenity} label={amenity} variant="outlined" />
-                        ))}
-                    </Box>
-                </Box>
-            )}
-        </Grid>
-
-        <Grid xs={12} md={5}>
+        <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 38%' }, minWidth: 0 }}>
             <Box sx={{ position: 'sticky', top: '20px' }}>
-                <Paper elevation={2} sx={{ p: 2, borderRadius: '8px', mb: 2 }}>
-                    <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 1}}>Condiciones Comerciales</Typography>
-                    {parseFloat(initialData.precio_venta) > 0 && 
-                        <Typography variant="h6"><AttachMoneyIcon sx={{verticalAlign: 'middle'}}/> Venta: ${parseFloat(initialData.precio_venta).toLocaleString()}</Typography>}
-                    {parseFloat(initialData.precio_alquiler) > 0 && 
-                        <Typography variant="h6"><AttachMoneyIcon sx={{verticalAlign: 'middle'}}/> Alquiler: ${parseFloat(initialData.precio_alquiler).toLocaleString()} /mes</Typography>}
+                {/* Precio destacado */}
+                <Paper elevation={3} sx={{ p: 3, borderRadius: '12px', mb: 2, textAlign: 'center', bgcolor: 'primary.main', color: 'white' }}>
+                    <Typography variant="body2" sx={{ opacity: 0.9, mb: 0.5 }}>Precio</Typography>
+                    {parseFloat(initialData.precio_venta || 0) > 0 && (
+                      <Typography variant="h3" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                        ${parseFloat(initialData.precio_venta).toLocaleString()}
+                      </Typography>
+                    )}
+                    {parseFloat(initialData.precio_alquiler || 0) > 0 && (
+                      <>
+                        <Typography variant="h3" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                          ${parseFloat(initialData.precio_alquiler).toLocaleString()}
+                        </Typography>
+                        <Typography variant="caption" sx={{ opacity: 0.9 }}>por mes</Typography>
+                      </>
+                    )}
+                    <Box sx={{ mt: 1 }}>
+                      <Chip label="Vista Previa" size="small" sx={{ bgcolor: 'warning.main', color: 'white', fontWeight: 'bold' }} />
+                    </Box>
                 </Paper>
 
-                {isLoaded && center ? (
-                    <Box>
-                        <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>Ubicación</Typography>
-                        <GoogleMap mapContainerStyle={mapContainerStyle} center={center} zoom={15} options={{ disableDefaultUI: true }}>
-                            <Marker position={center} />
-                        </GoogleMap>
+                {/* CTAs de ejemplo (no funcionales en preview) */}
+                <Paper elevation={2} sx={{ p: 2, borderRadius: '8px', mb: 2 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                        <Button 
+                          variant="contained" 
+                          fullWidth 
+                          size="large"
+                          startIcon={<PhoneIcon />}
+                          sx={{ py: 1.5, fontWeight: 'bold' }}
+                          disabled
+                        >
+                          Contactar
+                        </Button>
+                        <Box sx={{ display: 'flex', gap: 1.5 }}>
+                            <Button 
+                              variant="outlined" 
+                              fullWidth
+                              startIcon={<EventIcon />}
+                              disabled
+                            >
+                              Agendar Visita
+                            </Button>
+                            <Button 
+                              variant="outlined" 
+                              fullWidth
+                              startIcon={<FavoriteIcon />}
+                              disabled
+                            >
+                              Guardar
+                            </Button>
+                        </Box>
+                        <Button 
+                          variant="text" 
+                          fullWidth
+                          startIcon={<ShareIcon />}
+                          size="small"
+                          disabled
+                        >
+                          Compartir Propiedad
+                        </Button>
                     </Box>
+                </Paper>
+
+                {/* Mapa con contexto */}
+                {isLoaded && center ? (
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>📍 Ubicación Privilegiada</Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      En el corazón de {initialData.barrio}, a pasos de todo
+                    </Typography>
+                    <GoogleMap mapContainerStyle={mapContainerStyle} center={center} zoom={15} options={{ disableDefaultUI: true }}>
+                      <Marker position={center} />
+                    </GoogleMap>
+                    <Button
+                      variant="outlined"
+                      fullWidth
+                      sx={{ mt: 2 }}
+                      component="a"
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${center.lat},${center.lng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Ver indicaciones en Google Maps
+                    </Button>
+                  </Box>
                 ) : <CircularProgress />}
             </Box>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
       <Divider sx={{ my: 4 }} />
 
