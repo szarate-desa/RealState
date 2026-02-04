@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, IconButton, TextField, Typography, Select, MenuItem, InputLabel, FormControl, ToggleButtonGroup, ToggleButton, FormGroup, FormControlLabel, Checkbox, FormLabel } from '@mui/material';
+import { Box, IconButton, TextField, Typography, Select, MenuItem, InputLabel, FormControl, ToggleButtonGroup, ToggleButton, FormGroup, FormControlLabel, Checkbox, FormLabel, Button } from '@mui/material';
 import AddCircleOutline from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutline from '@mui/icons-material/RemoveCircleOutline';
 
@@ -218,9 +218,13 @@ const StepDescripcion: React.FC<StepDescripcionProps> = ({ onNext, onBack, tipos
         </Box>
       </Box>
 
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
-        <button onClick={onBack}>Back</button>
-        <button onClick={handleNext}>Next</button>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 2 }}>
+        <Button variant="outlined" onClick={onBack} type="button">
+          Atrás
+        </Button>
+        <Button variant="contained" onClick={handleNext} type="button">
+          Siguiente
+        </Button>
       </Box>
     </Box>
   );

@@ -215,12 +215,13 @@ export default function CreatePropertyWizard() {
     setCurrentStep((prev) => prev + 1);
   };
 
+  const steps = ['Ubicación', 'Detalles del Inmueble', 'Imágenes', 'Vista Previa y Publicación'];
+
   const handlePrevStep = (targetStep?: number) => {
-    if (targetStep !== undefined) {
-      setCurrentStep(targetStep);
-    } else {
-      setCurrentStep(prev => prev - 1);
-    }
+    setCurrentStep((prev) => {
+      const next = typeof targetStep === 'number' ? targetStep : prev - 1;
+      return Math.max(1, Math.min(steps.length, next));
+    });
   };
 
   const { token } = useAuth();
@@ -336,12 +337,10 @@ export default function CreatePropertyWizard() {
     }
   };
 
-  const steps = ['Ubicación', 'Detalles del Inmueble', 'Imágenes', 'Vista Previa y Publicación'];
-
   const renderStepContent = (step: number) => {
     switch (step) {
       case 1:
-        return <StepUbicacion onNext={handleNextStep} initialData={propertyData} departamentos={departamentos} ciudades={ciudades} />;
+        return <StepUbicacion onNext={handleNextStep} onBack={currentStep > 1 ? handlePrevStep : undefined} initialData={propertyData} departamentos={departamentos} ciudades={ciudades} />;
       case 2:
         if (!tipos || tipos.length === 0) {
           return <div>Cargando tipos de propiedad...</div>;

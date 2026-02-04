@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { GoogleMap, Marker, useLoadScript, Autocomplete } from '@react-google-maps/api';
+import { Box, TextField, Typography, Button, CircularProgress } from '@mui/material';
 
 interface StepUbicacionProps {
   onNext: (data: {
@@ -13,6 +14,7 @@ interface StepUbicacionProps {
     departamentoNombre: string;
     ciudadNombre: string;
   }) => void;
+  onBack?: () => void;
   initialData: any;
   departamentos: any[];
   ciudades: any[];
@@ -20,12 +22,13 @@ interface StepUbicacionProps {
 
 const mapContainerStyle = {
   width: '100%',
-  height: '300px',
+  height: '600px',
+  borderRadius: '4px',
 };
 const defaultCenter = { lat: -34.6037, lng: -58.3816 }; // Buenos Aires por defecto
 const libraries: ('places')[] = ['places'];
 
-const StepUbicacion: React.FC<StepUbicacionProps> = ({ onNext, initialData, departamentos, ciudades }) => {
+const StepUbicacion: React.FC<StepUbicacionProps> = ({ onNext, onBack, initialData, departamentos, ciudades }) => {
   const [latitud, setLatitud] = useState(initialData.latitud || '');
   const [longitud, setLongitud] = useState(initialData.longitud || '');
   const [direccion, setDireccion] = useState(initialData.direccion || '');
@@ -48,9 +51,22 @@ const StepUbicacion: React.FC<StepUbicacionProps> = ({ onNext, initialData, depa
     libraries,
   });
 
+  // Actualizar todos los estados cuando cambie initialData (ej: al volver atrás)
   React.useEffect(() => {
+    setLatitud(initialData.latitud || '');
+    setLongitud(initialData.longitud || '');
+    setDireccion(initialData.direccion || '');
+    setIdDepartamento(initialData.id_departamento || '');
+    setIdCiudad(initialData.id_ciudad || '');
+    setBarrio(initialData.barrio || '');
+    setPaisNombre(initialData.paisNombre || '');
+    setDepartamentoNombre(initialData.departamentoNombre || '');
+    setCiudadNombre(initialData.ciudadNombre || '');
+    
     if (initialData.latitud && initialData.longitud) {
       setMarkerPosition({ lat: parseFloat(initialData.latitud), lng: parseFloat(initialData.longitud) });
+    } else {
+      setMarkerPosition(null);
     }
   }, [initialData]);
 
@@ -58,6 +74,10 @@ const StepUbicacion: React.FC<StepUbicacionProps> = ({ onNext, initialData, depa
   const [loadingGeo, setLoadingGeo] = useState(false);
   // Geocoding para autocompletar departamento, ciudad y barrio
   const geocodeLatLng = (lat: number, lng: number) => {
+    if (!window.google || !window.google.maps || !window.google.maps.Geocoder) {
+      setLoadingGeo(false);
+      return;
+    }
     setLoadingGeo(true);
     const geocoder = new window.google.maps.Geocoder();
     geocoder.geocode({ location: { lat, lng } }, (results, status) => {
@@ -66,12 +86,27 @@ const StepUbicacion: React.FC<StepUbicacionProps> = ({ onNext, initialData, depa
         let cityName = '';
         let neighborhood = '';
         let countryName = '';
+        
+        // Actualizar la dirección formateada
+        setDireccion(results[0].formatted_address || '');
+        
         for (const comp of results[0].address_components) {
           if (comp.types.includes('country')) countryName = comp.long_name;
           if (comp.types.includes('administrative_area_level_1')) depName = comp.long_name;
           if (comp.types.includes('locality')) cityName = comp.long_name;
-          if (comp.types.includes('sublocality') || comp.types.includes('neighborhood')) neighborhood = comp.long_name;
+          
+          // Búsqueda más exhaustiva de barrio/vecindario
+          if (!neighborhood) {
+            if (comp.types.includes('neighborhood') || 
+                comp.types.includes('sublocality') ||
+                comp.types.includes('sublocality_level_1') ||
+                comp.types.includes('sublocality_level_2') ||
+                comp.types.includes('sublocality_level_3')) {
+              neighborhood = comp.long_name;
+            }
+          }
         }
+        
         setPaisNombre(countryName);
         setDepartamentoNombre(depName);
         setCiudadNombre(cityName);
@@ -98,10 +133,10 @@ const StepUbicacion: React.FC<StepUbicacionProps> = ({ onNext, initialData, depa
 
   // Cuando cambia el marcador, autocompleta los campos
   React.useEffect(() => {
-    if (markerPosition) {
-      geocodeLatLng(markerPosition.lat, markerPosition.lng);
-    }
-  }, [markerPosition]);
+    if (!markerPosition) return;
+    if (!isLoaded || !window.google || !window.google.maps || !window.google.maps.Geocoder) return;
+    geocodeLatLng(markerPosition.lat, markerPosition.lng);
+  }, [markerPosition, isLoaded]);
 
   const onMapClick = (e: any) => {
     if (e.latLng) {
@@ -140,119 +175,145 @@ const StepUbicacion: React.FC<StepUbicacionProps> = ({ onNext, initialData, depa
     }
   };
 
-  if (!isLoaded) return <div>Cargando mapa...</div>;
+  if (!isLoaded) return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}><CircularProgress /></Box>;
 
   return (
-    <div>
-      <h2>Step 1: Ubicación</h2>
-      <div style={{ display: 'flex', gap: '20px', marginTop: '16px' }}>
-        {/* Columna Izquierda */}
-        <div style={{ flex: 1 }}>
-          <div style={{ marginBottom: 8 }}>
-            {/* TODO: Migrar a PlaceAutocompleteElement de Google, ya que el componente Autocomplete está obsoleto. 
-                Ver: https://developers.google.com/maps/documentation/javascript/places-migration-overview */}
-            <Autocomplete
-              onLoad={setAutocomplete}
-              onPlaceChanged={onPlaceChanged}
-            >
-              <input
-                type="text"
-                placeholder="Buscar dirección"
-                value={direccion}
-                onChange={e => setDireccion(e.target.value)}
-                style={{ width: '100%', padding: 8 }}
-              />
-            </Autocomplete>
-          </div>
-          <GoogleMap
-            mapContainerStyle={mapContainerStyle}
-            center={markerPosition || defaultCenter}
-            zoom={markerPosition ? 16 : 12}
-            onClick={onMapClick}
-          >
-            {markerPosition && (
-              <Marker
-                position={markerPosition}
-                draggable
-                onDragEnd={onMarkerDragEnd}
-              />
-            )}
-          </GoogleMap>
-        </div>
+    <Box component="div" sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <Typography variant="h5" component="h2" sx={{ fontWeight: 600 }}>Step 1: Ubicación</Typography>
 
-        {/* Columna Derecha */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div>
-            <label>Dirección:</label>
-            <input
-              type="text"
-              value={direccion}
-              onChange={(e) => setDireccion(e.target.value)}
-              style={{ width: '100%' }}
+      {/* Mapa */}
+      <Box sx={{ border: '1px solid #ddd', borderRadius: 1, overflow: 'hidden' }}>
+        <GoogleMap
+          mapContainerStyle={mapContainerStyle}
+          center={markerPosition || defaultCenter}
+          zoom={markerPosition ? 16 : 12}
+          onClick={onMapClick}
+        >
+          {markerPosition && (
+            <Marker
+              position={markerPosition}
+              draggable
+              onDragEnd={onMarkerDragEnd}
             />
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <div style={{ flex: 1 }}>
-              <label>Latitud:</label>
-              <input
-                type="number"
-                value={latitud}
-                onChange={(e) => setLatitud(e.target.value)}
-                style={{ width: '100%' }}
-              />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label>Longitud:</label>
-              <input
-                type="number"
-                value={longitud}
-                onChange={(e) => setLongitud(e.target.value)}
-                style={{ width: '100%' }}
-              />
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <div style={{ flex: 1 }}>
-              <label>Departamento:</label>
-              <select
-                value={idDepartamento}
-                onChange={e => setIdDepartamento(e.target.value)}
-                style={{ width: '100%' }}
-                disabled={loadingGeo}
-              >
-                <option value="">Seleccione un departamento</option>
-                {departamentos.map(d => <option key={d.id} value={d.id}>{d.nombre}</option>)}
-              </select>
-            </div>
-            <div style={{ flex: 1 }}>
-              <label>Ciudad:</label>
-              <select
-                value={idCiudad}
-                onChange={e => setIdCiudad(e.target.value)}
-                style={{ width: '100%' }}
-                disabled={loadingGeo}
-              >
-                <option value="">Seleccione una ciudad</option>
-                {ciudades.filter(c => c.id_departamento === idDepartamento).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-              </select>
-            </div>
-            {loadingGeo && <div style={{ marginLeft: 8 }}><span role="status" aria-live="polite">🔄 Cargando...</span></div>}
-          </div>
-          <div>
-            <label>Barrio:</label>
-            <input
-              type="text"
+          )}
+        </GoogleMap>
+      </Box>
+
+      {/* Campos de entrada */}
+      <Box sx={{ border: '1px solid #ddd', p: 2, borderRadius: 1 }}>
+        <Typography variant="h6" gutterBottom>Información de Ubicación</Typography>
+        
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+          {/* Búsqueda de dirección con autocomplete */}
+          <Autocomplete
+            onLoad={setAutocomplete}
+            onPlaceChanged={onPlaceChanged}
+          >
+            <TextField
+              label="Buscar dirección"
+              placeholder="Ingrese la dirección"
+              fullWidth
+              variant="outlined"
+              size="small"
+              value={direccion}
+              onChange={e => setDireccion(e.target.value)}
+            />
+          </Autocomplete>
+
+          {/* Dirección completa */}
+          <TextField
+            label="Dirección"
+            fullWidth
+            value={direccion}
+            onChange={(e) => setDireccion(e.target.value)}
+            variant="outlined"
+            size="small"
+          />
+
+          {/* Latitud y Longitud */}
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <TextField
+              label="Latitud"
+              type="number"
+              fullWidth
+              value={latitud}
+              onChange={(e) => setLatitud(e.target.value)}
+              variant="outlined"
+              size="small"
+              inputProps={{ step: '0.0001' }}
+            />
+            <TextField
+              label="Longitud"
+              type="number"
+              fullWidth
+              value={longitud}
+              onChange={(e) => setLongitud(e.target.value)}
+              variant="outlined"
+              size="small"
+              inputProps={{ step: '0.0001' }}
+            />
+          </Box>
+
+          {/* Campos de ubicación detectados automáticamente */}
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <TextField
+              label="País"
+              fullWidth
+              value={paisNombre}
+              onChange={(e) => setPaisNombre(e.target.value)}
+              variant="outlined"
+              size="small"
+            />
+            <TextField
+              label="Departamento"
+              fullWidth
+              value={departamentoNombre}
+              onChange={(e) => setDepartamentoNombre(e.target.value)}
+              variant="outlined"
+              size="small"
+            />
+          </Box>
+
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <TextField
+              label="Ciudad"
+              fullWidth
+              value={ciudadNombre}
+              onChange={(e) => setCiudadNombre(e.target.value)}
+              variant="outlined"
+              size="small"
+            />
+            <TextField
+              label="Barrio"
+              fullWidth
               value={barrio}
               onChange={e => setBarrio(e.target.value)}
-              placeholder="Ej: Centro (si se deja vacío se usará 'Sin especificar')"
-              style={{ width: '100%' }}
+              placeholder="Ej: Centro (opcional)"
+              variant="outlined"
+              size="small"
             />
-          </div>
-        </div>
-      </div>
+          </Box>
 
-      <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
-        <button
+          {/* Indicador de carga */}
+          {loadingGeo && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#1976d2' }}>
+              <CircularProgress size={20} />
+              <Typography variant="body2">Detectando ubicación...</Typography>
+            </Box>
+          )}
+        </Box>
+      </Box>
+
+      {/* Botones de navegación */}
+      <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
+        {onBack && (
+          <Button variant="outlined" onClick={onBack} type="button">
+            Atrás
+          </Button>
+        )}
+        <Button
+          variant="contained"
+          type="button"
           onClick={() => onNext({
             latitud,
             longitud,
@@ -267,9 +328,9 @@ const StepUbicacion: React.FC<StepUbicacionProps> = ({ onNext, initialData, depa
           disabled={loadingGeo || !latitud || !longitud || !direccion}
         >
           Siguiente
-        </button>
-      </div>
-    </div>
+        </Button>
+      </Box>
+    </Box>
   );
 };
 
